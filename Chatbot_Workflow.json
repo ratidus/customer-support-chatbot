@@ -1,0 +1,839 @@
+{
+  "name": "Chatbot Workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appfOTdcLXNaebQkO",
+          "mode": "id"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkJ9pU2mQl80X7j",
+          "mode": "id"
+        },
+        "filterByFormula": "=SEARCH('{{ $node[\"Telegram Trigger\"].json[\"message\"][\"text\"] }}', {Question})\n ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        260,
+        -20
+      ],
+      "id": "b6322830-5862-40c9-8dd4-80a473a23e52",
+      "name": "Airtable",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "KyD8U5f3PjOfeC7Q",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const airtableData = $node[\"Airtable\"].json || {};\n\n// Перевіряємо, чи airtableData є об'єктом із полем \"id\" і \"createdTime\" (один запис без \"fields\")\nconst isSingleRecord = airtableData && typeof airtableData === 'object' && airtableData.id !== undefined && airtableData.createdTime !== undefined && airtableData.fields === undefined;\n// Перетворюємо один запис у масив, якщо це потрібно\nconst dataAsArray = isSingleRecord ? [airtableData] : \n                   (Array.isArray(airtableData) ? airtableData : \n                   (airtableData.records && Array.isArray(airtableData.records) ? airtableData.records : []));\n\nreturn [{\n  json: {\n    airtable_data: airtableData,\n    airtable_data_type: typeof airtableData,\n    is_array: Array.isArray(airtableData),\n    is_single_record: isSingleRecord,\n    has_records: airtableData.records !== undefined,\n    records_is_array: airtableData.records && Array.isArray(airtableData.records),\n    airtable_data_length: dataAsArray.length,\n    has_data: dataAsArray.length > 0\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        480,
+        -20
+      ],
+      "id": "9d694b10-20d8-4c73-959f-60febfa36544",
+      "name": "Airtable test"
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $node[\"Airtable test\"].json[\"has_data\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    },
+                    "id": "0e3016cd-2aaa-4526-8c22-537f44ac5669"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1d9c7fc-6578-435f-a2d8-f1fde1b008e9",
+                    "leftValue": "={{ !$node[\"Airtable test\"].json[\"has_data\"] }}",
+                    "rightValue": "",
+                    "operator": {
+                      "type": "boolean",
+                      "operation": "true",
+                      "singleValue": true
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        700,
+        -20
+      ],
+      "id": "9c97d5da-6020-43b5-9ff1-68717e73b5ed",
+      "name": "Template or AI"
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"chat\"][\"id\"] }}",
+        "text": "Вибачте, я не можу обробити ваш запит через технічну помилку. Спробуйте пізніше.",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        2500,
+        140
+      ],
+      "id": "f8050a18-fb72-42c1-8873-696d786b140e",
+      "name": "Error message",
+      "webhookId": "a8fd7d7f-3b18-4848-8e8b-de595f0d95fd",
+      "credentials": {
+        "telegramApi": {
+          "id": "OFFHuy6p5QC7eMgO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"chat\"][\"id\"] }}",
+        "text": "={{ $node[\"Airtable\"].json[\"Answer\"] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        1160,
+        -280
+      ],
+      "id": "8b55a223-85ee-416d-8d7f-934c92edbda4",
+      "name": "Template",
+      "webhookId": "840d0542-64fc-41b6-86c4-272de738d799",
+      "credentials": {
+        "telegramApi": {
+          "id": "OFFHuy6p5QC7eMgO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Функція для безпечного отримання даних із вузла\nfunction getNodeData(nodeName) {\n  try {\n    const data = $node[nodeName].json;\n    return data || { translation_text: \"\" };\n  } catch (error) {\n    return { translation_text: \"\" };\n  }\n}\n\nconst userQueryTranslation = getNodeData(\"Translate uk-en (userQuery)\");\nconst questionTranslation = getNodeData(\"Translate uk-en (Question)\");\nconst answerTranslation = getNodeData(\"Translate uk-en (Answer)\");\nconst ragData = ($node[\"Airtable RAG\"].json || [])[0] || {};\n\n// Перевірка, що переклад userQuery є обов'язковим\nif (!userQueryTranslation.translation_text) {\n  throw new Error(\"User query translation failed.\");\n}\n\nconst allTranslations = [\n  { translation_text: userQueryTranslation.translation_text || \"\" },\n  { translation_text: questionTranslation.translation_text || \"\" },\n  { translation_text: answerTranslation.translation_text || \"\" }\n];\n\nconst translatedRagData = {\n  ...ragData,\n  Question: questionTranslation.translation_text || \"\",\n  Answer: answerTranslation.translation_text || \"\"\n};\n\nreturn [{\n  \"json\": {\n    translation_data: allTranslations,\n    translated_user_query: userQueryTranslation.translation_text,\n    translated_rag_data: [translatedRagData]\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1900,
+        120
+      ],
+      "id": "b42177ad-cd10-456e-9eef-9d1e5dc2f66e",
+      "name": "Translate test uk-en"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-en-uk",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": \"{{ $node['AI (FlanT5)'].json['generated_text'] }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2580,
+        -180
+      ],
+      "id": "3dbc45e5-560a-40bd-907c-a513074a9cc3",
+      "name": "Translate en-uk",
+      "retryOnFail": true,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kqhlxEYQUIvXTKPG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "chatId": "={{ $node[\"Telegram Trigger\"].json[\"message\"][\"chat\"][\"id\"] }}",
+        "text": "={{ $node[\"Process AI Response\"].json[\"translated_answer\"] }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegram",
+      "typeVersion": 1.2,
+      "position": [
+        3800,
+        -160
+      ],
+      "id": "70ed3a27-f0cb-44db-8a91-8955620a3cc7",
+      "name": "Telegram",
+      "webhookId": "05c8ec31-103e-4edb-95ef-17e16cd964cc",
+      "credentials": {
+        "telegramApi": {
+          "id": "OFFHuy6p5QC7eMgO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/google/flan-t5-large",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": \"User query: {{$('Format RAG Context').item.json.prompt.userQuery}}\\nRelevant question: {{$('Format RAG Context').item.json.prompt.relevantQuestion}}\\nRelevant answer: {{$('Format RAG Context').item.json.prompt.relevantAnswer}}\",\n  \"parameters\": {\n    \"max_length\": 100\n  }\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        2320,
+        -180
+      ],
+      "id": "06bfde6b-b635-4f29-964a-149d167e1c89",
+      "name": "AI (FlanT5)",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kqhlxEYQUIvXTKPG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "search",
+        "base": {
+          "__rl": true,
+          "value": "appfOTdcLXNaebQkO",
+          "mode": "list",
+          "cachedResultName": "Chatbot FAQ",
+          "cachedResultUrl": "https://airtable.com/appfOTdcLXNaebQkO"
+        },
+        "table": {
+          "__rl": true,
+          "value": "tblkJ9pU2mQl80X7j",
+          "mode": "list",
+          "cachedResultName": "FAQ",
+          "cachedResultUrl": "https://airtable.com/appfOTdcLXNaebQkO/tblkJ9pU2mQl80X7j"
+        },
+        "filterByFormula": "=SEARCH(LOWER(\"{{ $node['Telegram Trigger'].json['message']['text'] }}\"), LOWER({Question})) > 0",
+        "returnAll": false,
+        "limit": 3,
+        "options": {
+          "fields": [
+            "Question",
+            "Answer"
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.airtable",
+      "typeVersion": 2.1,
+      "position": [
+        920,
+        80
+      ],
+      "id": "d4eafe3b-85bf-4f47-a799-17b307f5ca6d",
+      "name": "Airtable RAG",
+      "alwaysOutputData": true,
+      "credentials": {
+        "airtableTokenApi": {
+          "id": "KyD8U5f3PjOfeC7Q",
+          "name": "Airtable Personal Access Token account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const userQuery = $node[\"Translate test uk-en\"].json[\"translated_user_query\"] || \"\";\nconst ragData = $node[\"Translate test uk-en\"].json[\"translated_rag_data\"][0] || {};\n\nif (!userQuery) {\n  throw new Error(\"User query is missing from Translate test uk-en.\");\n}\n\nconst prompt = {\n  \"userQuery\": userQuery,\n  \"relevantQuestion\": ragData.Question || \"No question available\",\n  \"relevantAnswer\": ragData.Answer || \"No answer available\"\n};\n\nreturn [{\n  \"json\": {\n    \"prompt\": prompt\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2120,
+        -60
+      ],
+      "id": "aeca313e-9da5-4844-83e3-b780734e4eb8",
+      "name": "Format RAG Context"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-uk-en",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": ""
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": \"{{ $node['Telegram Trigger'].json['message']['text'] }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        120
+      ],
+      "id": "e047cd26-8072-4e64-95b5-d11e05057611",
+      "name": "Translate uk-en (userQuery)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": false,
+      "maxTries": 5,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kqhlxEYQUIvXTKPG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-uk-en",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": ""
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": {{ $node[\"Airtable RAG\"].json[\"Question\"] ? `\"${$node['Airtable RAG'].json['Question']}\"` : \"null\" }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1600,
+        -100
+      ],
+      "id": "03b6cae4-a3ef-45b8-9b26-945983d949dc",
+      "name": "Translate uk-en (Question)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": false,
+      "maxTries": 5,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kqhlxEYQUIvXTKPG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api-inference.huggingface.co/models/Helsinki-NLP/opus-mt-uk-en",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": ""
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"inputs\": {{ $node[\"Airtable RAG\"].json[\"Answer\"] ? `\"${$node['Airtable RAG'].json['Answer']}\"` : \"null\" }}\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1780,
+        -100
+      ],
+      "id": "abd28f99-3b64-45f3-9d25-1be8e93ff878",
+      "name": "Translate uk-en (Answer)",
+      "retryOnFail": true,
+      "waitBetweenTries": 5000,
+      "alwaysOutputData": false,
+      "maxTries": 5,
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "kqhlxEYQUIvXTKPG",
+          "name": "Header Auth account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const flanT5Response = $node[\"AI (FlanT5)\"].json || {};\nconst translatedResponse = $node[\"Translate en-uk\"].json || {};\n\nconst generatedAnswer = flanT5Response.generated_text || \"No answer generated.\";\nconst translatedAnswer = translatedResponse.translation_text || generatedAnswer;\n\nreturn [{\n  json: {\n    generated_answer: generatedAnswer,\n    translated_answer: translatedAnswer\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2920,
+        -200
+      ],
+      "id": "6545736e-10c7-4dc8-9b4d-a4f88911f40c",
+      "name": "Process AI Response"
+    },
+    {
+      "parameters": {
+        "operation": "insert",
+        "collection": "chat_history",
+        "fields": "={   \"user_query\": \"{{ $node['Telegram Trigger'].json['message']['text'] }}\",   \"answer\": \"{{ $node['Process AI Response'].json['translated_answer'] }}\",   \"timestamp\": \"{{ new Date().toISOString() }}\",   \"chat_id\": \"{{ $node[\"Telegram Trigger\"].json[\"message\"][\"chat\"][\"id\"] }}\" }",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.mongoDb",
+      "typeVersion": 1.1,
+      "position": [
+        3500,
+        -180
+      ],
+      "id": "7e175236-d015-4836-af2a-907695ac6037",
+      "name": "MongoDB",
+      "credentials": {
+        "mongoDb": {
+          "id": "Z4h7lzp1BKFDEaPW",
+          "name": "MongoDB account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "updates": [
+          "message"
+        ],
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.telegramTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        0,
+        0
+      ],
+      "id": "1bc4af13-8747-4f79-9a52-03639c3e7ec9",
+      "name": "Telegram Trigger",
+      "webhookId": "92c986e9-04b9-4713-97d6-a5cb41349bb4",
+      "credentials": {
+        "telegramApi": {
+          "id": "OFFHuy6p5QC7eMgO",
+          "name": "Telegram account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08P3GSDA0J",
+          "mode": "list",
+          "cachedResultName": "support-bot"
+        },
+        "text": "=New response: Query: {{ $node['Telegram Trigger'].json['message']['text'] }} Answer: {{ $node['Process AI Response'].json['translated_answer'] }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        3140,
+        -200
+      ],
+      "id": "d8ba7da1-d353-42d5-87e2-91536282a327",
+      "name": "Slack",
+      "webhookId": "81de09c9-a96d-43f9-bd4b-e629eb5112a4",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "cLhonfUQ5JTThJDF",
+          "name": "Slack account 3"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "authentication": "oAuth2",
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C08QEEM7LTH",
+          "mode": "list",
+          "cachedResultName": "bot-errors"
+        },
+        "text": "=Error occurred: Node: {{ $node.name }} Error: {{ $error.message }}",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        2700,
+        120
+      ],
+      "id": "367db05e-92a6-4523-9e6e-182cc49e48be",
+      "name": "Slack Error",
+      "webhookId": "a73ee685-129e-40eb-9f0a-f55ca5499332",
+      "credentials": {
+        "slackOAuth2Api": {
+          "id": "cLhonfUQ5JTThJDF",
+          "name": "Slack account 3"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        2280,
+        180
+      ],
+      "id": "46270b4f-2028-4105-b889-def787bc3775",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "6fcbc2cc-bb85-4fea-a412-0ab2d71f92f4",
+              "leftValue": "={{ $node[\"Debug Question Data\"].json[\"question_exists\"] }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        1440,
+        -60
+      ],
+      "id": "e9368d9f-e97d-4354-9567-bc2978387cad",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "mode": "raw",
+        "jsonOutput": "={{ { \"question_text\": $(\"Airtable RAG\").item.json[\"Question\"] || \"\", \"question_exists\": !!$(\"Airtable RAG\").item.json[\"Question\"] } }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        1260,
+        -40
+      ],
+      "id": "0ef8f5d5-9a59-4b4f-ab69-9ccdb66e1b7a",
+      "name": "Debug Question Data",
+      "alwaysOutputData": true
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Airtable": {
+      "main": [
+        [
+          {
+            "node": "Airtable test",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Airtable test": {
+      "main": [
+        [
+          {
+            "node": "Template or AI",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Template or AI": {
+      "main": [
+        [
+          {
+            "node": "Template",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Airtable RAG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Translate test uk-en": {
+      "main": [
+        [
+          {
+            "node": "Format RAG Context",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Translate en-uk": {
+      "main": [
+        [
+          {
+            "node": "Process AI Response",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "AI (FlanT5)": {
+      "main": [
+        [
+          {
+            "node": "Translate en-uk",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Airtable RAG": {
+      "main": [
+        [
+          {
+            "node": "Translate uk-en (userQuery)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Format RAG Context": {
+      "main": [
+        [
+          {
+            "node": "AI (FlanT5)",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Translate uk-en (userQuery)": {
+      "main": [
+        [
+          {
+            "node": "Debug Question Data",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Translate uk-en (Question)": {
+      "main": [
+        [
+          {
+            "node": "Translate uk-en (Answer)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Translate uk-en (Answer)": {
+      "main": [
+        [
+          {
+            "node": "Translate test uk-en",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        []
+      ]
+    },
+    "Process AI Response": {
+      "main": [
+        [
+          {
+            "node": "Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "MongoDB": {
+      "main": [
+        [
+          {
+            "node": "Telegram",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Telegram Trigger": {
+      "main": [
+        [
+          {
+            "node": "Airtable",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Slack": {
+      "main": [
+        [
+          {
+            "node": "MongoDB",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error message": {
+      "main": [
+        [
+          {
+            "node": "Slack Error",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Error message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Translate uk-en (Question)",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Translate test uk-en",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Debug Question Data": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner"
+  },
+  "versionId": "0e72c162-9565-4822-bbc8-120539241964",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "41b63cf16840082d8281770caebdb58ba669af8e0dd3c05c2630ba8894be2366"
+  },
+  "id": "MmmaxUF8DdPrhMF8",
+  "tags": []
+}
